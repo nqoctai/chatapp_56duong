@@ -10,7 +10,7 @@ const instance = axios.create({
 
 
 const handleRefreshToken = async () => {
-    const res = await instance.get('/auth/refresh');
+    const res = await instance.get('api/v1/auth/refresh');
     if (res && res.data) return res.data.access_token;
     else return null;
 
@@ -48,7 +48,7 @@ instance.interceptors.response.use(function (response) {
     if (error.config
         && error.response
         && +error.response.status === 401
-        && error.config.url !== '/auth/login'
+        && error.config.url !== 'api/v1/auth/login'
         && !error.config.headers[NO_RETRY_HEADER]
     ) {
         localStorage.removeItem('access_token');
@@ -65,7 +65,7 @@ instance.interceptors.response.use(function (response) {
     if (error.config
         && error.response
         && +error.response.status === 400
-        && error.config.url === '/auth/refresh'
+        && error.config.url === 'api/v1/auth/refresh'
         // && location.pathname.startsWith("/admin")
     ) {
         window.location.href = '/login';

@@ -1,5 +1,5 @@
 import TextInput from "@components/FormInput.jsx/TextInput";
-import React from "react";
+import React, { use } from "react";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -38,7 +38,13 @@ const LoginPage = () => {
       {
         onSuccess: (data) => {
           console.log("Login successful", data);
-          localStorage.setItem("user", data);
+          localStorage.setItem(
+            "user",
+            JSON.stringify({
+              username: data.username,
+              avatarUrl: data.avatarUrl,
+            }),
+          );
           navigate("/");
         },
         onError: (error) => {
