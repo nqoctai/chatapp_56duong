@@ -40,6 +40,7 @@ public class MessageContentMapper {
         final User user = messageContentDTO.getSender() == null ? null
                 : userRepository.findById(messageContentDTO.getSender())
                 .orElseThrow(() -> new EntityNotFoundException("User not found"));
+        messageContent.setUser(user);
 
         return messageContent;
     }
