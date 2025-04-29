@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { callLogin } from "@services/api";
+import { callLogin, findMessageRoomByMembers, getOnlineUsers } from "@services/api";
 
 
 export const useLogin = () => {
@@ -7,3 +7,17 @@ export const useLogin = () => {
       mutationFn: ({ username, password }) => callLogin(username, password),
     });
   };
+
+export const useGetOnlineUsers = () => {
+    return useMutation({
+      mutationFn: () => getOnlineUsers(),
+    });
+  };
+
+export const useFindMessageRoomByMembers = () => {
+    return useMutation({
+      mutationFn: (members) => findMessageRoomByMembers(members),
+    });
+  }
+
+

@@ -17,6 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 @NoArgsConstructor
 @EntityListeners(AuditingEntityListener.class)
+@Builder
 public class MessageContent {
     @Id
     @GeneratedValue(generator = "UUID", strategy = GenerationType.AUTO)

@@ -1,5 +1,5 @@
 import TextInput from "@components/FormInput.jsx/TextInput";
-import React, { use } from "react";
+import React from "react";
 import { useForm } from "react-hook-form";
 import * as yup from "yup";
 import { yupResolver } from "@hookform/resolvers/yup";
@@ -16,7 +16,7 @@ const LoginPage = () => {
   const navigate = useNavigate();
 
   const formSchema = yup.object().shape({
-    email: yup.string().email("Invalid email").required("Email is required"),
+    username: yup.string().required("Username is required"),
     password: yup.string().required("Password is required"),
   });
 
@@ -27,14 +27,14 @@ const LoginPage = () => {
   } = useForm({
     resolver: yupResolver(formSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
 
   const onSubmit = (formData) => {
     mutate(
-      { username: formData.email, password: formData.password },
+      { username: formData.username, password: formData.password },
       {
         onSuccess: (data) => {
           console.log("Login successful", data);
@@ -60,11 +60,11 @@ const LoginPage = () => {
       <p className="mb-5 text-center text-2xl font-bold">Login</p>
       <form className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
         <FormField
-          name={"email"}
-          label={"Email"}
+          name={"username"}
+          label={"Username"}
           control={control}
           Component={TextInput}
-          error={errors["email"]}
+          error={errors["username"]}
         />
         <FormField
           name={"password"}
