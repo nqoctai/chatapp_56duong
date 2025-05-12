@@ -3,7 +3,12 @@ import { Avatar, Badge, IconButton, Typography } from "@mui/material";
 import { MoreVert, Info } from "@mui/icons-material";
 
 const ChatHeader = ({ conversation, onInfoClick }) => {
-  if (!conversation) return null;
+  if (!conversation) {
+    console.log("ChatHeader: conversation is null or undefined");
+    return null;
+  }
+
+  console.log("ChatHeader rendered with:", conversation);
 
   return (
     <div className="flex items-center justify-between border-b p-3">

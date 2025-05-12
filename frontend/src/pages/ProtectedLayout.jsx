@@ -1,14 +1,18 @@
+import { WebSocketProvider } from "@context/SocketContext";
 import React from "react";
 
 import { Navigate, Outlet } from "react-router-dom";
 
 const ProtectedLayout = () => {
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
   return (
-    <div>
-      <div className="bg-dark-200">
-        <Outlet />
+    <WebSocketProvider currentUser={user}>
+      <div>
+        <div className="bg-dark-200">
+          <Outlet />
+        </div>
       </div>
-    </div>
+    </WebSocketProvider>
   );
 };
 

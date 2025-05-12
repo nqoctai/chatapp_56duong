@@ -1,4 +1,6 @@
 import axios from '../utils/axios-customize';
+import SockJS from 'sockjs-client';
+import { Stomp } from '@stomp/stompjs';
 
 // Auth API services
 export const callLogin = (username, password) => {
@@ -59,6 +61,70 @@ export const findMessageRoomAtLeastOneContent = async (username) => {
         return null;
     }
 }
+
+// Message Content API services
+export const getMessageContentsByRoomId = async (roomId) => {
+    try {
+        const response = await axios.get(`api/v1/messagecontents/${roomId}`);
+        return response || []; // API trả về một mảng các MessageContentDTO
+    } catch (error) {
+        console.error('Error fetching messages:', error);
+        return [];
+    }
+};
+
+// WebSocket connection setup
+let stompClient = null;
+let subscriptionMessages = null;
+
+export const connectWebSocket = (username) => {
+    const socket = new SockJS('http://localhost:8080/api/ws');
+    stompClient = Stomp.over(socket);
+    
+    stompClient.connect({}, () => {
+        console.log('Connected to WebSocket');
+        subscribeMessages(username);
+    }, (error) => {
+        console.error('WebSocket connection error:', error);
+    });
+};
+
+const subscribeMessages = (username) => {
+    subscriptionMessages = stompClient.subscribe(`/user/${username}/queue/messages`, (message) => {
+        const receivedMessage = JSON.parse(message.body);
+        // Emit message to any listeners
+        if (window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('newMessage', { detail: receivedMessage }));
+        }
+    });
+};
+
+export const disconnectWebSocket = () => {
+    if (subscriptionMessages) {
+        subscriptionMessages.unsubscribe();
+    }
+    if (stompClient !== null) {
+        stompClient.disconnect(() => {
+            console.log('WebSocket disconnected');
+        });
+    }
+};
+
+export const sendMessage = (message) => {
+    if (stompClient && stompClient.connected) {
+        const messageToSend = {
+            content: message.content,
+            messageRoomId: message.messageRoomId,
+            sender: message.senderUsername,
+            messageType: "TEXT", // Đặt mặc định là TEXT
+            // dateSent sẽ được thiết lập ở phía server
+        };
+        console.log("Gửi tin nhắn:", messageToSend);
+        stompClient.send("/app/send-message", {}, JSON.stringify(messageToSend));
+        return true;
+    }
+    return false;
+};
 
 
 

@@ -1,6 +1,5 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import ActiveUserList from "@components/ActiveUserList";
-import { useWebSocket } from "@hooks/useWebSocket";
 import {
   TextField,
   InputAdornment,
@@ -17,13 +16,12 @@ import MessageInput from "@components/Chat/MessageInput";
 import UserSearchDialog from "@components/Dialog/UserSearchDialog";
 import GroupInfoSidebar from "@components/Chat/GroupInfoSidebar";
 import { findMessageRoomAtLeastOneContent } from "@services/api";
+import MessageList from "@components/Chat/MessageList";
+import { useWebSocketContext } from "@context/SocketContext";
 
 const HomePage = () => {
-  const [currentUser, setCurrentUser] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
   const [activeConversation, setActiveConversation] = useState(null);
-  const [newMessage, setNewMessage] = useState("");
-  const [messages, setMessages] = useState([]);
-  const messagesEndRef = useRef(null);
   const [userSearchDialogOpen, setUserSearchDialogOpen] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [showGroupInfo, setShowGroupInfo] = useState(false);
@@ -33,7 +31,19 @@ const HomePage = () => {
     setCurrentUser(user);
   }, []);
 
-  const { activeUsers } = useWebSocket(currentUser);
+  const {
+    activeUsers,
+    connected,
+    messages: wsMessages,
+  } = useWebSocketContext();
+
+  // Thêm debug log để theo dõi kết nối WebSocket
+  useEffect(() => {
+    console.log("WebSocket connected:", connected);
+    if (wsMessages?.length > 0) {
+      console.log("WebSocket messages:", wsMessages);
+    }
+  }, [connected, wsMessages]);
 
   useEffect(() => {
     const fetchRooms = async () => {
@@ -67,7 +77,6 @@ const HomePage = () => {
                 ? "https://img.icons8.com/color/48/000000/group-task.png"
                 : "https://randomuser.me/api/portraits/lego/1.jpg",
               lastMessage: room.lastMessage,
-
               timestamp: new Date(room.createdDate),
               unread: 0,
               isOnline: true,
@@ -89,15 +98,9 @@ const HomePage = () => {
     fetchRooms();
   }, [currentUser]);
 
-  // Scroll to bottom of messages when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
-
   const handleSelectConversation = (conversation) => {
+    console.log("Selected conversation:", conversation);
     setActiveConversation(conversation);
-    // Load fake messages for the selected conversation
-    setMessages([...conversation.lastMessage]);
 
     // Mark conversation as read (remove unread count)
     setConversations((prevConversations) =>
@@ -108,37 +111,6 @@ const HomePage = () => {
 
     // Close group info sidebar when changing conversations
     setShowGroupInfo(false);
-  };
-
-  const sendMessage = () => {
-    if (newMessage.trim() === "" || !activeConversation) return;
-
-    // Add the new message to the conversation
-    const newMsg = {
-      id: Date.now(),
-      text: newMessage.trim(),
-      sender: "me",
-      timestamp: new Date(),
-      senderName: currentUser?.username || "Tôi",
-    };
-
-    setMessages((prevMessages) => [...prevMessages, newMsg]);
-
-    // Update last message in the conversation list
-    setConversations((prevConversations) =>
-      prevConversations.map((conv) =>
-        conv.id === activeConversation.id
-          ? {
-              ...conv,
-              lastMessage: newMessage.trim(),
-              timestamp: new Date(),
-              formattedTime: "Bây giờ",
-            }
-          : conv,
-      ),
-    );
-
-    setNewMessage(""); // Clear the input field
   };
 
   // Xử lý khi người dùng chọn một hoặc nhiều user từ dialog
@@ -163,18 +135,8 @@ const HomePage = () => {
       // Thêm cuộc trò chuyện mới vào đầu danh sách
       setConversations((prev) => [newGroupChat, ...prev]);
 
-      // Tạo tin nhắn chào mừng
-      const welcomeMessage = {
-        id: Date.now(),
-        text: `Chào mừng đến với nhóm ${newGroupChat.name}! Cuộc trò chuyện nhóm đã được tạo.`,
-        sender: "system",
-        timestamp: new Date(),
-        senderName: "Hệ thống",
-      };
-
       // Chọn cuộc trò chuyện mới
       setActiveConversation(newGroupChat);
-      setMessages([welcomeMessage]);
     } else {
       // Trường hợp chỉ chọn một người
       const selectedUser = users[0];
@@ -206,7 +168,6 @@ const HomePage = () => {
 
         // Chọn cuộc trò chuyện mới
         setActiveConversation(newConversation);
-        setMessages([]);
       }
     }
   };
@@ -251,71 +212,55 @@ const HomePage = () => {
 
         {/* Chat area */}
         {activeConversation ? (
-          <div className={`flex ${showGroupInfo ? "w-1/2" : "w-2/3"} flex-col`}>
-            {/* Chat header with info button */}
-            <ChatHeader
-              conversation={activeConversation}
-              onInfoClick={toggleGroupInfo}
-            />
+          <div
+            className={`flex ${showGroupInfo ? "w-1/2" : "w-2/3"} h-full flex-col`}
+          >
+            {/* Chat header with info button - Explicit z-index and position to ensure visibility */}
+            <div className="chat-header-wrapper z-10 bg-white">
+              <ChatHeader
+                conversation={activeConversation}
+                onInfoClick={toggleGroupInfo}
+              />
+            </div>
 
-            {/* Messages area */}
-            <div
-              className="flex-1 overflow-y-auto p-3"
-              style={{ height: "calc(100vh - 200px)" }}
-            >
-              {messages.map((message) => (
-                <ChatMessage key={message.id} message={message} />
-              ))}
-              <div ref={messagesEndRef} />
+            {/* Messages area - Make sure it doesn't overflow the header */}
+            <div className="flex flex-1 flex-col overflow-hidden">
+              <MessageList
+                roomId={activeConversation?.id}
+                currentUser={currentUser?.username}
+              />
             </div>
 
             {/* Message input */}
             <div className="border-t p-3">
               <MessageInput
-                value={newMessage}
-                onChange={setNewMessage}
-                onSend={sendMessage}
+                roomId={activeConversation?.id}
+                currentUser={currentUser?.username}
               />
             </div>
           </div>
         ) : (
-          <div
-            className={`flex ${showGroupInfo ? "w-1/2" : "w-2/3"} flex-col items-center justify-center bg-gray-50`}
-          >
-            <Avatar
-              sx={{ width: 80, height: 80, bgcolor: "primary.main", mb: 2 }}
-            >
-              <Send sx={{ fontSize: 40 }} />
-            </Avatar>
-            <Typography variant="h6" gutterBottom>
-              Chưa chọn cuộc trò chuyện
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              align="center"
-              sx={{ px: 4 }}
-            >
-              Chọn một người dùng từ danh sách bên trái để bắt đầu cuộc trò
-              chuyện
-            </Typography>
+          <div className="flex w-2/3 items-center justify-center bg-gray-50">
+            <div className="text-center">
+              <Group className="mb-4 !h-16 !w-16 text-gray-400" />
+              <Typography variant="h6" className="text-gray-500">
+                Chọn một cuộc trò chuyện để bắt đầu
+              </Typography>
+            </div>
           </div>
         )}
 
-        {/* Group Info Sidebar */}
+        {/* Group info sidebar */}
         {showGroupInfo && activeConversation && (
-          <div className="w-1/4">
-            <GroupInfoSidebar
-              conversation={activeConversation}
-              onClose={() => setShowGroupInfo(false)}
-            />
-          </div>
+          <GroupInfoSidebar
+            conversation={activeConversation}
+            onClose={toggleGroupInfo}
+          />
         )}
       </div>
 
-      {/* User Search Dialog */}
+      {/* User search dialog */}
       <UserSearchDialog
-        currentUser={currentUser}
         open={userSearchDialogOpen}
         onClose={() => setUserSearchDialogOpen(false)}
         onUserSelect={handleUserSelect}

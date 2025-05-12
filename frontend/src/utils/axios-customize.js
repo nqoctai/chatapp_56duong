@@ -1,7 +1,14 @@
-// import { notification } from "antd";
 import axios from "axios";
 
 const baseUrl = import.meta.env.VITE_BASE_URL;
+
+// Tạo một event mới để thông báo lỗi
+const notifyError = (message) => {
+    const event = new CustomEvent('axiosError', { 
+        detail: { message } 
+    });
+    window.dispatchEvent(event);
+};
 
 const instance = axios.create({
     baseURL: baseUrl,
@@ -69,14 +76,9 @@ instance.interceptors.response.use(function (response) {
         // && location.pathname.startsWith("/admin")
     ) {
         window.location.href = '/login';
-    }
-
-    if (+error.response.status === 403) {
+    }    if (+error.response.status === 403) {
         console.log('error.response', error.response);
-        // notification.error({
-        //     message: error?.response?.data?.message ?? "",
-        //     description: error?.response?.data?.error ?? ""
-        // })
+        notifyError(error?.response?.data?.message || "Bạn không có quyền thực hiện hành động này");
     }
 
     return Promise.reject(error);
